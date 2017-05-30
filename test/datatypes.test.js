@@ -7,11 +7,87 @@
 require('./init.js');
 var assert = require('assert');
 
-var db, BlobModel, EnumModel, ANIMAL_ENUM, City;
+var db, BlobModel, EnumModel, ANIMAL_ENUM, City, Account;
 var mysqlVersion;
 
 describe('MySQL specific datatypes', function() {
   before(setup);
+
+  describe('Support explicit datatypes on a property', function() {
+    var data = [
+      {
+        type: 'Student - Basic',
+        amount: 1000,
+      },
+      {
+        type: 'Professional',
+        amount: 1599.75,
+      },
+    ];
+    before(function(done) {
+      require('./init.js');
+      db = getSchema();
+      Account = db.define('Account', {
+        type: {type: String},
+        amount: {
+          type: Number,
+          mysql: {
+            dataType: 'DECIMAL',
+            dataPrecision: 10,
+            dataScale: 2,
+          }},
+      });
+      db.automigrate(done);
+    });
+    after(function(done) {
+      Account.destroyAll(done);
+    });
+
+    it('create an instance', function(done) {
+      Account.create(data, function(err, result) {
+        assert(!err);
+        assert(result);
+        assert.equal(data.length, result.length);
+        assert.equal(data[0].amount, result[0].__data.amount);
+        assert.equal(data[1].amount, result[1].__data.amount);
+        done();
+      });
+    });
+
+    it('find an instance', function(done) {
+      Account.find(function(err, result) {
+        assert(!err);
+        assert(result);
+        assert.equal(data.length, result.length);
+        assert.equal(data[0].amount, result[0].__data.amount);
+        assert.equal(data[1].amount, result[1].__data.amount);
+        done();
+      });
+    });
+
+    it('find an instance by id', function(done) {
+      Account.findById(1, function(err, result) {
+        assert(!err);
+        assert(result);
+        assert.equal(data[0].amount, result.amount);
+        done();
+      });
+    });
+
+    it('update an instance', function(done) {
+      var updatedData = {
+        type: 'Student - Basic',
+        amount: 1155.77,
+      };
+      Account.update({id: 1}, updatedData, function(err, result) {
+        assert(!err);
+        assert(result);
+        assert(result.count);
+        assert.equal(1, result.count);
+        done();
+      });
+    });
+  });
 
   it('should run migration', function(done) {
     db.automigrate(function() {
